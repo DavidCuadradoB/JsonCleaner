@@ -2,6 +2,7 @@ import json
 import glob, os
 import codecs
 import requests
+import getImages
 
 
 cleanPath = "C:\\Users\\fnxcu\\Documents\\python\\cleanerJson\\cleanedFiles"
@@ -25,7 +26,7 @@ def cleanTypes(types):
     return cleanTypes
 
 def getCityName(originCity):
-    acceptedTypes = ["amsterdam", "londres", "madrid", "salamanca"]
+    acceptedTypes = ["amsterdam", "london", "madrid", "salamanca", "barcelona", "tokyo"]
     genericCity="otro"
     if originCity in acceptedTypes:
         return originCity
@@ -35,9 +36,13 @@ def getCityName(originCity):
 def cleanPhotos(photos):
     if photos:
         photo = photos[0]
+        photoReference = {}
         if "photo_reference" in photo:
-            return photo["photo_reference"]
-    return ""
+            photoReference["photo_reference"] = photo["photo_reference"] if "photo_reference" in photo else ""
+            photoReference["width"] = photo["width"] if "width" in photo else ""
+            photoReference["height"] = photo["height"] if "height" in photo else ""
+            return photoReference
+    return {}
 
 def getLocation(geometry):
     if geometry:
@@ -45,13 +50,20 @@ def getLocation(geometry):
             return geometry["location"]
     return {}
 
+def getImage(photoReference):
+    if photoReference:
+        reference = photoReference["photo_reference"] if "photo_reference" in photoReference else ""
+        width = photoReference["width"] if "width" in photoReference else ""
+        return getImages.getImage(reference, width)
+    return ""
+
 def generateJson(filePath):
     data=""
 
     fileSplited = filePath.split("\\")
     cityFolder = getCityName(fileSplited[-2])
     resultFile = fileSplited[-1]
-
+    poiType = resultFile.split(".")[-2]
 
     # with open(filePath, 'rb') as myFile:
     with codecs.open(filePath, 'rb', "utf-8") as myFile:
@@ -67,9 +79,10 @@ def generateJson(filePath):
         poi["location"] = getLocation(result["geometry"]) if "geometry" in result else ""
         poi["id"] = result["id"] if "id" in result else ""
         poi["name"]=result["name"] if "name" in result else ""
-        poi["photo_reference"] = cleanPhotos(result["photos"]) if "photos" in result else ""
+        poi["photo_reference"] = cleanPhotos(result["photos"]) if "photos" in result else {}
+        poi["photo_url"] = getImage(poi["photo_reference"])
         poi["rating"]=result["rating"] if "rating" in result else ""
-        poi["types"]= cleanTypes(result["types"]) if "types" in result else []
+        poi["type"]= poiType
 
 
         # if "geometry" in result:
@@ -110,11 +123,13 @@ def generateJson(filePath):
         json.dump(pois, outFile, indent=4, ensure_ascii=False)
     print("end")
 
-for file in glob.glob(originJsonPath + '/**/*.json', recursive=True):
+for file in glob.glob(originJsonPath + '\\tokyo/*.json', recursive=True):
     print("\n\n\ngenerating: ", file.split("\\")[-2], " - ", file.split("\\")[-1])
     generateJson(file)
-    print("========end=======")
+    print("==================")
+    print("\n\n========end=======")
+    print("==================")
 
-# testFile = "C:\\Users\\fnxcu\\Documents\\python\\cleanerJson\\jsonsFiles\\madrid\\park.json"
+# testFile = "C:\\Users\\fnxcu\\Documents\\python\\cleanerJson\\jsonsFiles\\salamanca\\church.json"
 
 # generateJson(testFile)
